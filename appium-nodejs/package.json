@@ -1,0 +1,18 @@
+{
+  "name": "bstack-appium-nodejs-sample",
+  "version": "1.0.0",
+  "description": "Appium (Node.js, Mocha) tests for the BrowserStack Sample iOS app, run with the BrowserStack Node SDK",
+  "type": "commonjs",
+  "scripts": {
+    "test": "browserstack-node-sdk mocha test/specs --timeout 120000 --require dotenv/config",
+    "test:sample": "browserstack-node-sdk mocha test/specs/text-input.spec.js --timeout 120000 --require dotenv/config",
+    "test:customer": "browserstack-node-sdk mocha test/specs/customer-complete-flow.spec.js --timeout 300000 --require dotenv/config"
+  },
+  "devDependencies": {
+    "browserstack-node-sdk": "latest",
+    "chai": "^4.5.0",
+    "dotenv": "^16.4.5",
+    "mocha": "^11.0.0",
+    "selenium-webdriver": "^4.51.0"
+  }
+}

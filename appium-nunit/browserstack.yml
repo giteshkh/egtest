@@ -1,0 +1,48 @@
+# Credentials come from the environment (never hardcode them)
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
+
+framework: nunit
+
+# App under test: bs:// id of the uploaded app
+app: ${BS_APP_ID}
+
+# Cross-device parallel run: one session per platform entry
+platforms:
+  - platformName: ios
+    platformVersion: "17"
+    deviceName: iPhone 15
+  - platformName: ios
+    platformVersion: "18"
+    deviceName: iPhone 16
+
+parallelsPerPlatform: 1
+
+projectName: Front Systems - Sample
+buildName: appium-nunit-sample
+buildIdentifier: "#${BUILD_NUMBER}"
+
+# ---- BrowserStack SDK features ----
+# Test Reporting & Analytics
+testReporting: true
+testReportingOptions:
+  projectName: Front Systems - Sample
+  buildName: appium-nunit-sample
+
+# Debug artefacts
+debug: true
+networkLogs: true
+deviceLogs: true
+appiumLogs: true
+video: true
+appProfiling: true
+
+# AI self-healing locators
+selfHeal: true
+
+# App Accessibility scanning during the run
+accessibility: true
+accessibilityOptions:
+  wcagVersion: wcag21aa
+
+browserstackLocal: false

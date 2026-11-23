@@ -1,0 +1,17 @@
+bin/
+obj/
+Screenshots/
+TestResults/
+.vs/
+.idea/
+*.user
+Config/AppConfig.json
+
+# Local env files, dependencies and run logs
+.env
+node_modules/
+log/
+appium-nodejs/log/
+appium-nunit/log/
+appium-nunit/bin/
+appium-nunit/obj/

@@ -1,0 +1,54 @@
+# Translated from LoginHelper.PerformLogin + PermissionsHelper (C# suite).
+# Reusable subflow: run it from the other customer flows with `runFlow: login.yaml`.
+# Credentials come from env vars (-e TEST_SECONDARY_USERNAME=... -e TEST_SECONDARY_PASSWORD=...).
+appId: ${APP_ID}
+---
+- launchApp
+# Already logged in and POS visible: skip the whole login
+- runFlow:
+    when:
+      visible:
+        id: "MenuStartSale"
+    commands:
+      - stopApp
+      - launchApp
+# Onboarding: tap install / next to reveal the login form
+- runFlow:
+    when:
+      visible:
+        id: "BtnNextLoggInn"
+    commands:
+      - tapOn:
+          id: "BtnNextLoggInn"
+- runFlow:
+    when:
+      visible:
+        id: "btnScannerStepNext"
+    commands:
+      - tapOn:
+          id: "btnScannerStepNext"
+- extendedWaitUntil:
+    visible:
+      id: "AutUserName"
+    timeout: 15000
+- tapOn:
+    id: "AutUserName"
+- inputText: ${TEST_SECONDARY_USERNAME}
+- hideKeyboard
+- tapOn:
+    text: ".*(Password|password|Passord).*"
+- inputText: ${TEST_SECONDARY_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: "btnLoggInn"
+# iOS permission dialogs
+- runFlow:
+    when:
+      visible: "Allow.*"
+    commands:
+      - tapOn: "Allow.*"
+- runFlow:
+    when:
+      visible: "OK"
+    commands:
+      - tapOn: "OK"

@@ -1,0 +1,14 @@
+appId: com.browserstack.Sample-iOS
+name: Sample app home screen shows the Text button
+tags:
+  - smoke
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "Text Button"
+    timeout: 15000
+- assertVisible:
+    id: "Text Button"
+- assertVisible: "Alert"
+- assertVisible: "UI Elements"

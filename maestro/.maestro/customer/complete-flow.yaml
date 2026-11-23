@@ -1,0 +1,156 @@
+# Translated from CompleteFlowTest / SaleTest (C# suite): login, cash sale, park and retrieve,
+# add customer + return, Z-report settlement, logout.
+# Run with the customer's app id and test account:
+#   maestro cloud ... -e APP_ID=<bundle id> -e TEST_SECONDARY_USERNAME=... -e TEST_SECONDARY_PASSWORD=... \
+#                     -e FS_UNLOCK_NAME=... -e FS_UNLOCK_PIN=....
+# The element ids are copied from the C# suite and were not run against the customer's app here.
+appId: ${APP_ID}
+env:
+  SALE_BARCODE: "5401157473672"
+  CASH_AMOUNT: "299"
+  CASH_IN_POS: "5000"
+  CUSTOMER_SEARCH: "Vibeke"
+tags:
+  - customer
+---
+- runFlow: login.yaml
+- runFlow: unlock.yaml
+
+# --- Cash sale (PerformSingleSale) ---
+- tapOn:
+    id: "MenuStartSale"
+- tapOn:
+    id: "ScanCode"
+- inputText: ${SALE_BARCODE}
+- tapOn: "Return"
+- tapOn:
+    id: "menuCash"
+- tapOn:
+    id: "Amount"
+- inputText: ${CASH_AMOUNT}
+- tapOn:
+    id: "BtnPaymentDone"
+- tapOn:
+    id: "BtnNoReceipt"
+- extendedWaitUntil:
+    visible:
+      id: "MenuStartSale"
+    timeout: 15000
+
+# --- Delete salesline and cancel sale ---
+- tapOn:
+    id: "MenuStartSale"
+- tapOn:
+    id: "ScanCode"
+- inputText: ${SALE_BARCODE}
+- tapOn: "Return"
+- tapOn:
+    id: "SalesLineItem"
+- tapOn:
+    id: "BtnDeleteSalesLine"
+- tapOn:
+    id: "ScanCode"
+- inputText: ${SALE_BARCODE}
+- tapOn: "Return"
+- tapOn:
+    id: "btnMore"
+- tapOn:
+    id: "BtnCancelSale"
+- extendedWaitUntil:
+    visible:
+      id: "MenuStartSale"
+    timeout: 15000
+
+# --- Park and retrieve sale ---
+- tapOn:
+    id: "MenuStartSale"
+- tapOn:
+    id: "ScanCode"
+- inputText: ${SALE_BARCODE}
+- tapOn: "Return"
+- tapOn:
+    id: "btnMore"
+- tapOn: "Park sale"
+- tapOn: "More"
+- tapOn:
+    id: "BtnParkedSales"
+- tapOn:
+    index: 0
+    text: ".*"
+- tapOn:
+    id: "menuCash"
+- tapOn:
+    id: "Amount"
+- inputText: ${CASH_AMOUNT}
+- tapOn:
+    id: "BtnPaymentDone"
+- tapOn:
+    id: "BtnNoReceipt"
+- extendedWaitUntil:
+    visible:
+      id: "MenuStartSale"
+    timeout: 15000
+
+# --- Add customer to sale and complete a return ---
+- tapOn:
+    id: "MenuStartSale"
+- tapOn:
+    id: "AddCustomerTapped"
+- inputText: ${CUSTOMER_SEARCH}
+- tapOn: "Return"
+- tapOn:
+    index: 0
+    text: ".*${CUSTOMER_SEARCH}.*"
+- tapOn:
+    id: "ScanCode"
+- inputText: ${SALE_BARCODE}
+- tapOn: "Return"
+- tapOn:
+    id: "SalesLineItem"
+- tapOn:
+    id: "BtnReturnToStock"
+- tapOn:
+    id: "menuDone"
+- runFlow:
+    when:
+      visible: "Cash"
+    commands:
+      - tapOn: "Cash"
+- tapOn:
+    id: "BtnNoReceipt"
+- extendedWaitUntil:
+    visible:
+      id: "MenuStartSale"
+    timeout: 15000
+
+# --- End of day: Z-report settlement ---
+- tapOn: "More"
+- tapOn: "Z Report"
+- extendedWaitUntil:
+    visible:
+      id: "BtnAddWithdrawal"
+    timeout: 30000
+- tapOn:
+    id: "BtnAddWithdrawal"
+- tapOn:
+    id: "Amount"
+- inputText: ${CASH_AMOUNT}
+- tapOn:
+    id: "BtnWithdrawalWithdraw"
+- tapOn:
+    id: "CashHoldings"
+- inputText: ${CASH_IN_POS}
+- tapOn:
+    id: "Done"
+- tapOn:
+    id: "BtnSettlement"
+- tapOn:
+    id: "BtnConfirmOkButton"
+
+# --- Back and logout ---
+- tapOn:
+    id: "BackButton"
+- tapOn:
+    id: "BtnLogOut"
+- tapOn:
+    id: "BtnConfirmOkButton"

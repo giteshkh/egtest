@@ -1,0 +1,148 @@
+name: BrowserStack Tests
+
+# This workflow demonstrates the MSB1008 bug in the BrowserStack .NET SDK
+# and the workaround we use in production.
+#
+# See README.md for a full bug report.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dotnet-version:
+        description: '.NET SDK version'
+        required: false
+        default: '10.0.x'
+
+jobs:
+  upload-to-browserstack:
+    runs-on: ubuntu-latest
+    outputs:
+      app_hash: ${{ steps.upload.outputs.app_hash }}
+    steps:
+      - name: Download IPA artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: IPA
+
+      - name: Upload app to BrowserStack
+        id: upload
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        run: |
+          APP_FILE=$(find . -name "*.ipa" -type f | head -1)
+          if [ -z "$APP_FILE" ]; then
+            echo "Error: No .ipa file found"
+            exit 1
+          fi
+          echo "Found app: $APP_FILE"
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -u "${BROWSERSTACK_USERNAME}:${BROWSERSTACK_ACCESS_KEY}" \
+            -F "file=@$APP_FILE" \
+            https://api-cloud.browserstack.com/app-automate/upload)
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Error: Failed to upload. HTTP status: $HTTP_STATUS. Response: $BODY"
+            exit 1
+          fi
+          APP_HASH=$(echo "$BODY" | jq -r '.app_url')
+          echo "app_hash=$APP_HASH" >> $GITHUB_OUTPUT
+          echo "Uploaded: $APP_HASH"
+
+  # ── BROKEN: BrowserStack SDK path ───────────────────────────────────────────
+  #
+  # This job demonstrates the bug. The SDK (tested on v1.37.2, v1.40.1, v1.46.1)
+  # passes "dotnet test <project>" as literal positional arguments to MSBuild,
+  # causing MSB1008 "Only one project can be specified".
+  #
+  # The SDK swallows the error and exits 0, so GitHub Actions shows "success"
+  # even though NO BrowserStack sessions were ever created.
+  #
+  # Broken MSBuild command the SDK generates:
+  #   MSBuild ... -restore:false dotnet test MyProject.csproj -distributedlogger:...
+  #                              ^^^^^^^^^^^^ these should NOT be here
+  #
+  browserstack-tests-ios-sdk-broken:
+    needs: upload-to-browserstack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ inputs.dotnet-version || '10.0.x' }}
+      - run: dotnet restore FrontSystems.MobileAutomation.iOS/FrontSystems.MobileAutomation.iOS.csproj
+      - name: Restore BrowserStack SDK tool
+        working-directory: FrontSystems.MobileAutomation.iOS
+        run: dotnet tool restore
+      - name: "[BROKEN] Run via SDK — fails with MSB1008, no sessions created"
+        working-directory: FrontSystems.MobileAutomation.iOS
+        env:
+          BS_APP_HASH: ${{ needs.upload-to-browserstack.outputs.app_hash }}
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          BS_USE_SDK: "true"
+          TEST_PLATFORM: iOS
+          BS_BUILD_NAME: sdk-broken
+        run: |
+          # This command produces MSB1008 and no BrowserStack sessions.
+          # The SDK exits 0 regardless, so CI shows green — silent failure.
+          dotnet browserstack-sdk dotnet test FrontSystems.MobileAutomation.iOS.csproj \
+            --configuration Release \
+            --no-restore \
+            --filter "TestCategory=iOS&TestCategory=LoginFlow"
+
+  # ── WORKING: Direct BrowserStack hub, manual capabilities ───────────────────
+  #
+  # Workaround: bypass the SDK entirely. Connect directly to hub-cloud.browserstack.com
+  # using manual Appium capabilities set via environment variables. Use a GitHub Actions
+  # matrix to run in parallel across multiple devices (replaces SDK's platform list).
+  #
+  # The test driver code reads BS_DEVICE_NAME, BS_OS_VERSION, BS_DEVICE_ORIENTATION,
+  # BS_APP_HASH, BROWSERSTACK_USERNAME, BROWSERSTACK_ACCESS_KEY from env vars when
+  # BS_USE_SDK is not set, and connects to hub-cloud.browserstack.com/wd/hub directly.
+  #
+  browserstack-tests-ios-direct:
+    needs: upload-to-browserstack
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - device: "iPhone 16"
+            os: "18"
+            orientation: "portrait"
+          - device: "iPad 10th"
+            os: "16"
+            orientation: "landscape"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ inputs.dotnet-version || '10.0.x' }}
+      - run: dotnet restore FrontSystems.MobileAutomation.iOS/FrontSystems.MobileAutomation.iOS.csproj
+      - name: "[WORKING] Run via direct BrowserStack hub — ${{ matrix.device }} (iOS ${{ matrix.os }})"
+        env:
+          BS_APP_HASH: ${{ needs.upload-to-browserstack.outputs.app_hash }}
+          BS_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BS_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          BS_DEVICE_NAME: ${{ matrix.device }}
+          BS_OS_VERSION: ${{ matrix.os }}
+          BS_DEVICE_ORIENTATION: ${{ matrix.orientation }}
+          TEST_PLATFORM: iOS
+          BS_BUILD_NAME: direct-working
+        run: |
+          dotnet test FrontSystems.MobileAutomation.iOS/FrontSystems.MobileAutomation.iOS.csproj \
+            --configuration Release \
+            --filter "TestCategory=iOS&TestCategory=LoginFlow" \
+            --logger "console;verbosity=detailed"
+      - uses: actions/upload-artifact@v4.6.2
+        if: always()
+        with:
+          name: screenshots-direct-${{ matrix.device }}
+          path: |
+            FrontSystems.MobileAutomation.iOS/bin/Release/net*/Debug_*.png
+            FrontSystems.MobileAutomation.iOS/bin/Release/net*/Screenshots/**
+          if-no-files-found: ignore

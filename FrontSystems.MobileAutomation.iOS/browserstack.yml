@@ -1,0 +1,51 @@
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
+framework: mstest
+
+platforms:
+  - platformName: ios
+    platformVersion: "26"
+    deviceName: iPhone 17
+    app: ${BS_APP_HASH}
+  - platformName: ios
+    platformVersion: "26"
+    deviceName: iPad Air 5
+    app: ${BS_APP_HASH}
+  - platformName: ios
+    platformVersion: "26"
+    deviceName: iPhone 16
+    app: ${BS_APP_HASH}
+  - platformName: ios
+    platformVersion: "18"
+    deviceName: iPad Pro 11 2021
+    app: ${BS_APP_HASH}
+
+parallelsPerPlatform: 1
+
+projectName: "Front Systems"
+buildName: "build-${BS_BUILD_NAME}"
+buildIdentifier: ${BS_BUILD_NAME}
+
+# Capabilities (previously code-side bstack:options; the SDK reads them from here)
+debug: true
+networkLogs: true
+appProfiling: true
+autoAcceptAlerts: true
+
+testObservability: true
+browserstackAutomation: true
+selfHeal: true
+
+testOrchestrationOptions:
+  retryTestsOnFailure:
+    enabled: true
+    maxRetries: 2
+  abortBuildOnFailure:
+    enabled: true
+    maxFailures: 5
+  runSmartSelection:
+    enabled: true
+    mode: relevantFirst
+  runPreviouslyFailedFirst: true
+  rerunPreviouslyFailed: true
+  skipFlakyandFailed: false

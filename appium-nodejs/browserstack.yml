@@ -1,0 +1,50 @@
+# Credentials come from the environment (never hardcode them)
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
+
+# App under test: bs:// id of the uploaded BStackSampleApp.ipa
+app: ${BS_APP_ID}
+
+# Cross-device parallel run: one session per platform entry
+platforms:
+  - deviceName: iPhone 15
+    platformVersion: "17"
+    platformName: ios
+  - deviceName: iPhone 16
+    platformVersion: "18"
+    platformName: ios
+
+parallelsPerPlatform: 1
+
+# Reporting / grouping on the dashboard
+projectName: Front Systems - Sample
+buildName: appium-nodejs-sample
+buildIdentifier: "#${BUILD_NUMBER}"
+
+# ---- BrowserStack SDK features ----
+# Test Reporting & Analytics
+testReporting: true
+testReportingOptions:
+  projectName: Front Systems - Sample
+  buildName: appium-nodejs-sample
+
+# Debug artefacts
+debug: true
+networkLogs: true
+deviceLogs: true
+appiumLogs: true
+video: true
+appProfiling: true
+
+# AI self-healing locators
+selfHeal: true
+
+# App Accessibility scanning during the run
+accessibility: true
+accessibilityOptions:
+  wcagVersion: wcag21aa
+  includeIssueType:
+    bestPractice: true
+    needsReview: true
+
+browserstackLocal: false

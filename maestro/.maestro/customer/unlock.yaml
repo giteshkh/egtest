@@ -1,0 +1,19 @@
+# Translated from BaseIosTest.EnsureUnlocked: press the user name on the lock screen, then enter the PIN.
+# Env vars: FS_UNLOCK_NAME, FS_UNLOCK_PIN (4 digits).
+appId: ${APP_ID}
+---
+- evalScript: ${output.pin = FS_UNLOCK_PIN.split('')}
+- runFlow:
+    when:
+      notVisible:
+        id: "MenuStartSale"
+    commands:
+      - tapOn: ${FS_UNLOCK_NAME}
+      - tapOn: ${output.pin[0]}
+      - tapOn: ${output.pin[1]}
+      - tapOn: ${output.pin[2]}
+      - tapOn: ${output.pin[3]}
+- extendedWaitUntil:
+    visible:
+      id: "MenuStartSale"
+    timeout: 30000
